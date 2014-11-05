@@ -58,6 +58,9 @@ define(function (require, exports, module) {
     // Minimum size (height or width) for autodiscovered resizable panels
     var DEFAULT_MIN_SIZE = 100;
     
+    // Constants for the preferences referred to in this file
+    var WORD_WRAP = "wordWrap";
+    
     // Load dependent modules
     var AppInit                 = require("utils/AppInit"),
         PreferencesManager      = require("preferences/PreferencesManager");
@@ -133,6 +136,30 @@ define(function (require, exports, module) {
         return $(element).is(":visible");
     }
     
+    /**
+     * Because of the resizing performance issue we need to make the width of the codemirror 
+     *  fixed size (3000px) in each pane to prevent rendering while resizing. 
+     * Note: Slow resizing is still there in warp mode or in horizontal split.
+     * @param {boolean} false if we want the normal width
+     */
+    function makeEditorsFixedWidth(makeFixed) {
+        var warpMode = PreferencesManager.get(WORD_WRAP);
+        if(warpMode) {
+            // we shouldn't fix it in warp mode
+            return;
+        }
+
+        var $firstPane = $("#first-pane>.pane-content>.CodeMirror");
+        var $secondPane = $("#second-pane>.pane-content>.CodeMirror");
+        if (makeFixed) {
+            $firstPane.addClass("fixedWidth");
+            $secondPane.addClass("fixedWidth");
+        } else {
+            $firstPane.removeClass("fixedWidth");
+            $secondPane.removeClass("fixedWidth");
+        }
+    }
+
     /**
      * Adds resizing and (optionally) expand/collapse capabilities to a given html element. The element's size
      * & visibility are automatically saved & restored as a view-state preference.
@@ -348,6 +375,9 @@ define(function (require, exports, module) {
                 baseSize        = 0,
                 resizeStarted   = false;
             
+            // change the editors' width to fixed size to prevent rendering contents
+            makeEditorsFixedWidth(true);
+            
             isResizing = true;
             $body.append($resizeShield);
                         
@@ -438,6 +468,9 @@ define(function (require, exports, module) {
             }
             
             function endResize(e) {
+                // restoring the width to default value
+                makeEditorsFixedWidth(false);
+                
                 if (isResizing) {
                     
                     var elementSize	= elementSizeFunction.apply($element);
